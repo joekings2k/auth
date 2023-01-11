@@ -2,12 +2,13 @@
 require("dotenv").config()
 const express = require("express");
 const ejs = require("ejs");
-const md5 = require("md5");
 const mongoose = require("mongoose");
 const app = express();
 const userMode = require("./user");
 const User = userMode.userModel;
 const port = 3000;
+const bcrypt = require("bcrypt")
+const saltRounds = 10
 
 
 app.use(express.urlencoded({ extended: true }));
@@ -38,16 +39,20 @@ app.route("/login")
 })
 	.post((req,res)=>{
 		const email = req.body.username;
-    const password = md5(req.body.password);
+    const password = req.body.password;
 		User.findOne({email:email},(err,foundUser)=>{
 			if(err){
 				console.log(err.message)
         res.redirect("/")
 			}else{
 				if(foundUser){
-					if(foundUser.password ===password){
-						res.render("secrets")
-					}
+          bcrypt.compare(password,foundUser.password,(err,result)=>{
+            if(result === true){
+              res.render("secrets");
+            }
+          })
+					
+					
 				}
 			}
 		})
@@ -63,21 +68,27 @@ app
   })
   .post((req, res) => {
     const email = req.body.username;
-    const password = md5(req.body.password);
+    const password = req.body.password;
+    bcrypt.hash(password,saltRounds,(err,hash)=>{
+
+    })
 
     const create = async () => {
       try {
-        const newUser = new User({
-          email: email,
-          password: password,
+        await bcrypt.hash(password, saltRounds, (err, hash) => {
+          const newUser = new User({
+            email: email,
+            password: hash,
+          });
+          newUser.save((err) => {
+            if (err) {
+              console.log(err);
+            } else {
+              res.render("secrets");
+            }
+          });
         });
-        newUser.save((err) => {
-          if (err) {
-            console.log(err);
-          } else {
-            res.render("secrets");
-          }
-        });
+        
       } catch (err) {
         console.log(err.message);
       }
