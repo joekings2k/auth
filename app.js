@@ -116,12 +116,15 @@ app
     userrLog();
   });
 
-app.route("/secrets").get((req, res) => {
-  if (req.isAuthenticated()) {
-    res.render("secrets");
-  } else {
-    res.redirect("/login");
-  }
+app.route("/secrets")
+  .get((req, res) => {
+    User.find({secret:{$ne:null}},(err,foundUser)=>{
+      if(err){
+        console.log(err)
+      }else{
+        res.render("secrets",{userSecrets:foundUser})
+      }
+    })
 });
 
 app
@@ -143,6 +146,31 @@ app
       }
     });
   });
+
+app.route("/submit")
+  .get((req,res)=>{
+    if (req.isAuthenticated()) {
+      res.render("submit");
+    } else {
+      res.redirect("/login");
+    }
+  })
+  .post((req,res)=>{
+    const userSecret = req.body.secret 
+    const userId=req.user.id
+    User.findOne({_id:userId},(err,foundUser)=>{
+      if(!err){
+        if(foundUser){
+          foundUser.secret = userSecret;
+          foundUser.save()
+          res.redirect("secrets")
+        }
+        
+      }else{
+        console.log(err.message)
+      }
+    })
+  })
 
 app.route("/logout").get((req, res) => {
   req.logout((err) => {
